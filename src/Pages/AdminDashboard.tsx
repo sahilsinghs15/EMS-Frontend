@@ -90,6 +90,19 @@ const AdminDashboard = () => {
             { header: "Department", key: "department", width: 15 },
             { header: "Hire Date", key: "hireDate", width: 15 },
             { header: "Work Email", key: "workEmail", width: 25 },
+            { header: "Date Of Birth", key: "dateOfBirth", width: 25 },
+            { header: "Gender", key: "gender", width: 25 },
+            { header: "Nationality", key: "nationality", width: 25 },
+            { header: "Photo Url", key: "photoUrl", width: 25 },
+            { header: "Manager", key: "manager", width: 25 },
+            { header: "Employment Type", key: "employmentType", width: 25 },
+            { header: "Status", key: "status", width: 25 },
+            { header: "Termination Date", key: "terminationDate", width: 25 },
+            { header: "Home Address", key: "homeAddress", width: 25 },
+            { header: "Personal Phone Number", key: "personalPhoneNumber", width: 25 },
+            { header: "Work Phone Number", key: "workPhoneNumber", width: 25 },
+            { header: "Personal Email", key: "personalEmail", width: 25 },
+            { header: "User Account", key: "userAccount", width: 25 },
         ];
 
         filteredEmployees.forEach((emp) => {
@@ -100,12 +113,26 @@ const AdminDashboard = () => {
                 department: emp.employmentInfo.department,
                 hireDate: new Date(emp.employmentInfo.hireDate).toLocaleDateString(),
                 workEmail: emp.contactInfo.workEmail,
+                dateOfBirth: emp.dateOfBirth,
+                gender: emp.gender,
+                nationality: emp.nationality,
+                photoUrl: emp.photoUrl,
+                manager: emp.employmentInfo.manager ?? "",
+                employmentType: emp.employmentInfo.employmentType,
+                status: emp.employmentInfo.status,
+                terminationDate: emp.employmentInfo.terminationDate ?? "",
+                homeAddress: emp.contactInfo.homeAddress,
+                personalPhoneNumber: emp.contactInfo.personalPhoneNumber ?? "",
+                workPhoneNumber: emp.contactInfo.workPhoneNumber,
+                personalEmail: emp.contactInfo.personalEmail ?? "",
+                userAccount: emp.userAccount,
             });
         });
 
         const buffer = await workbook.xlsx.writeBuffer();
         saveAs(new Blob([buffer]), "employees.xlsx");
     };
+
 
     const handleDownloadCSV = async (filteredEmployees: IEmployee[]) => {
         if (filteredEmployees.length === 0) {
@@ -117,12 +144,25 @@ const AdminDashboard = () => {
         const worksheet = workbook.addWorksheet("Employees");
 
         worksheet.columns = [
-            { header: "Full Name", key: "fullName" },
-            { header: "Employee ID", key: "employeeId" },
-            { header: "Job Title", key: "jobTitle" },
-            { header: "Department", key: "department" },
-            { header: "Hire Date", key: "hireDate" },
-            { header: "Work Email", key: "workEmail" },
+            { header: "Full Name", key: "fullName", width: 20 },
+            { header: "Employee ID", key: "employeeId", width: 15 },
+            { header: "Job Title", key: "jobTitle", width: 20 },
+            { header: "Department", key: "department", width: 15 },
+            { header: "Hire Date", key: "hireDate", width: 15 },
+            { header: "Work Email", key: "workEmail", width: 25 },
+            { header: "Date Of Birth", key: "dateOfBirth", width: 25 },
+            { header: "Gender", key: "gender", width: 25 },
+            { header: "Nationality", key: "nationality", width: 25 },
+            { header: "Photo Url", key: "photoUrl", width: 25 },
+            { header: "Manager", key: "manager", width: 25 },
+            { header: "Employment Type", key: "employmentType", width: 25 },
+            { header: "Status", key: "status", width: 25 },
+            { header: "Termination Date", key: "terminationDate", width: 25 },
+            { header: "Home Address", key: "homeAddress", width: 25 },
+            { header: "Personal Phone Number", key: "personalPhoneNumber", width: 25 },
+            { header: "Work Phone Number", key: "workPhoneNumber", width: 25 },
+            { header: "Personal Email", key: "personalEmail", width: 25 },
+            { header: "User Account", key: "userAccount", width: 25 },
         ];
 
         filteredEmployees.forEach((emp) => {
@@ -133,6 +173,19 @@ const AdminDashboard = () => {
                 department: emp.employmentInfo.department,
                 hireDate: new Date(emp.employmentInfo.hireDate).toLocaleDateString(),
                 workEmail: emp.contactInfo.workEmail,
+                dateOfBirth: emp.dateOfBirth,
+                gender: emp.gender,
+                nationality: emp.nationality,
+                photoUrl: emp.photoUrl,
+                manager: emp.employmentInfo.manager ?? "",
+                employmentType: emp.employmentInfo.employmentType,
+                status: emp.employmentInfo.status,
+                terminationDate: emp.employmentInfo.terminationDate ?? "",
+                homeAddress: emp.contactInfo.homeAddress,
+                personalPhoneNumber: emp.contactInfo.personalPhoneNumber ?? "",
+                workPhoneNumber: emp.contactInfo.workPhoneNumber,
+                personalEmail: emp.contactInfo.personalEmail ?? "",
+                userAccount: emp.userAccount,
             });
         });
 
@@ -140,6 +193,7 @@ const AdminDashboard = () => {
         const blob = new Blob([csvBuffer], { type: "text/csv;charset=utf-8;" });
         saveAs(blob, "employees.csv");
     };
+
 
     const handleManualChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
