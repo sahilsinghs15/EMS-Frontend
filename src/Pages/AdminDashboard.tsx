@@ -10,12 +10,15 @@ import {
     IEmployee,
 } from "../Redux/Slices/employeeSlice.reducer";
 import { useAppDispatch, useAppSelector } from "../Helpers/hooks";
+import { logout } from "../Redux/Slices/authSlice.reducer";
 
 type ManualFormType = Omit<IEmployee, "_id">;
 
 const AdminDashboard = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const {isLoggedIn} = useAppSelector((state) => state.auth);
+    const role = useAppSelector((state) => state.auth.data?.role);
     const { employees, status, error } = useAppSelector((state) => state.employees);
 
     const [tab, setTab] = useState("manual");
@@ -53,8 +56,21 @@ const AdminDashboard = () => {
     const [file, setFile] = useState<File | null>(null);
 
     useEffect(() => {
-        dispatch(getAllEmployeesAsync());
-    }, [dispatch]);
+        if (!isLoggedIn) {
+            toast.error("You are not logged in. Redirecting to login page.");
+            navigate('/');
+        } else if (role !== 'ADMIN') {
+            toast.error("Access denied. Redirecting to Employee Dashboard.");
+            navigate('/employee');
+        } else {
+            dispatch(getAllEmployeesAsync());
+        }
+    }, [dispatch, isLoggedIn, role, navigate]);
+
+    const handleLogout = async () => {
+        await dispatch(logout());
+        navigate('/');
+    };
 
     const handleManualChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -177,6 +193,13 @@ const AdminDashboard = () => {
             <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 text-center mb-6">
                 Admin Dashboard
             </h1>
+
+            <button
+                onClick={handleLogout}
+                className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition"
+            >
+                Logout
+            </button>
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 max-w-6xl mx-auto">
                 
                 {/* Tabs */}
