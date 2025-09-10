@@ -11,22 +11,24 @@ import {
 } from "../Redux/Slices/employeeSlice.reducer";
 import { useAppDispatch, useAppSelector } from "../Helpers/hooks";
 import { logout } from "../Redux/Slices/authSlice.reducer";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 type ManualFormType = Omit<IEmployee, "_id">;
 
 const AdminDashboard = () => {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
-    const {isLoggedIn} = useAppSelector((state) => state.auth);
+    const { isLoggedIn } = useAppSelector((state) => state.auth);
     const role = useAppSelector((state) => state.auth.data?.role);
     const { employees, status, error } = useAppSelector((state) => state.employees);
 
     const [tab, setTab] = useState("manual");
     const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
 
-    // Date filter state
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
+    const [showDropdown, setShowDropdown] = useState(false);
 
     const [manualForm, setManualForm] = useState<ManualFormType>({
         fullName: "",
@@ -58,10 +60,10 @@ const AdminDashboard = () => {
     useEffect(() => {
         if (!isLoggedIn) {
             toast.error("You are not logged in. Redirecting to login page.");
-            navigate('/');
-        } else if (role !== 'ADMIN') {
+            navigate("/");
+        } else if (role !== "ADMIN") {
             toast.error("Access denied. Redirecting to Employee Dashboard.");
-            navigate('/employee');
+            navigate("/employee");
         } else {
             dispatch(getAllEmployeesAsync());
         }
@@ -69,7 +71,74 @@ const AdminDashboard = () => {
 
     const handleLogout = async () => {
         await dispatch(logout());
-        navigate('/');
+        navigate("/");
+    };
+
+    const handleDownloadExcel = async (filteredEmployees: IEmployee[]) => {
+        if (filteredEmployees.length === 0) {
+            toast.error("No data available to export.");
+            return;
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Employees");
+
+        worksheet.columns = [
+            { header: "Full Name", key: "fullName", width: 20 },
+            { header: "Employee ID", key: "employeeId", width: 15 },
+            { header: "Job Title", key: "jobTitle", width: 20 },
+            { header: "Department", key: "department", width: 15 },
+            { header: "Hire Date", key: "hireDate", width: 15 },
+            { header: "Work Email", key: "workEmail", width: 25 },
+        ];
+
+        filteredEmployees.forEach((emp) => {
+            worksheet.addRow({
+                fullName: emp.fullName,
+                employeeId: emp.employeeId,
+                jobTitle: emp.employmentInfo.jobTitle,
+                department: emp.employmentInfo.department,
+                hireDate: new Date(emp.employmentInfo.hireDate).toLocaleDateString(),
+                workEmail: emp.contactInfo.workEmail,
+            });
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveAs(new Blob([buffer]), "employees.xlsx");
+    };
+
+    const handleDownloadCSV = async (filteredEmployees: IEmployee[]) => {
+        if (filteredEmployees.length === 0) {
+            toast.error("No data available to export.");
+            return;
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Employees");
+
+        worksheet.columns = [
+            { header: "Full Name", key: "fullName" },
+            { header: "Employee ID", key: "employeeId" },
+            { header: "Job Title", key: "jobTitle" },
+            { header: "Department", key: "department" },
+            { header: "Hire Date", key: "hireDate" },
+            { header: "Work Email", key: "workEmail" },
+        ];
+
+        filteredEmployees.forEach((emp) => {
+            worksheet.addRow({
+                fullName: emp.fullName,
+                employeeId: emp.employeeId,
+                jobTitle: emp.employmentInfo.jobTitle,
+                department: emp.employmentInfo.department,
+                hireDate: new Date(emp.employmentInfo.hireDate).toLocaleDateString(),
+                workEmail: emp.contactInfo.workEmail,
+            });
+        });
+
+        const csvBuffer = await workbook.csv.writeBuffer();
+        const blob = new Blob([csvBuffer], { type: "text/csv;charset=utf-8;" });
+        saveAs(blob, "employees.csv");
     };
 
     const handleManualChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -121,10 +190,8 @@ const AdminDashboard = () => {
         e.preventDefault();
         if (editingEmployeeId) {
             dispatch(updateEmployeeAsync({ id: editingEmployeeId, data: manualForm }));
-            toast.success("Employee updated successfully!");
         } else {
             dispatch(createManualEmployeeAsync(manualForm));
-            toast.success("Employee created successfully!");
         }
         resetForm();
     };
@@ -155,7 +222,6 @@ const AdminDashboard = () => {
     const handleDelete = (id: string) => {
         if (window.confirm("Are you sure you want to delete this employee?")) {
             dispatch(deleteEmployeeAsync(id));
-            toast.success("Employee deleted successfully!");
         }
     };
 
@@ -196,12 +262,12 @@ const AdminDashboard = () => {
 
             <button
                 onClick={handleLogout}
-                className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition"
+                className="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition mb-4 ml-6"
             >
                 Logout
             </button>
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 max-w-6xl mx-auto">
-                
+
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6">
                     <button
@@ -461,12 +527,8 @@ const AdminDashboard = () => {
                     </form>
                 )}
 
-                {/* Employee List */}
-                <hr className="my-8" />
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">All Employees</h2>
-
-                {/* Date Filters */}
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                {/* Date Filters and Export  */}
+                <div className="flex flex-col md:flex-row gap-4 items-end mt-12">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                         <input
@@ -485,8 +547,38 @@ const AdminDashboard = () => {
                             className="p-2 border rounded-lg"
                         />
                     </div>
+
+                    {/* Export Dropdown */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowDropdown(!showDropdown)}
+                            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+                        >
+                            Download ▼
+                        </button>
+                        {showDropdown && (
+                            <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-md z-10">
+                                <button
+                                    onClick={() => handleDownloadExcel(filteredEmployees)}
+                                    className="block w-full px-4 py-2 text-left hover:bg-gray-100"
+                                >
+                                    Excel (.xlsx)
+                                </button>
+                                <button
+                                    onClick={() => handleDownloadCSV(filteredEmployees)}
+                                    className="block w-full px-4 py-2 text-left hover:bg-gray-100"
+                                >
+                                    CSV (.csv)
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
+
+                {/* Employee List */}
+                <hr className="my-2" />
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">All Employees</h2>
                 {renderStatus()}
                 {status === "succeeded" && (
                     <div className="overflow-x-auto rounded-lg shadow-sm border border-gray-200">
