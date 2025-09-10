@@ -1,16 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
-import { login} from '../Redux/Slices/authSlice.reducer';
-import { useAppDispatch } from '../Helpers/hooks';
+import { login } from '../Redux/Slices/authSlice.reducer';
+import { useAppDispatch, useAppSelector } from '../Helpers/hooks';
+
 function Login() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const { isLoggedIn } = useAppSelector((state) => state.auth);
+    const role = useAppSelector((state) => state.auth.data?.role);
 
     const [loginData, setLoginData] = useState({
         email: "",
         password: "",
     });
+
+    useEffect(() => {
+        if (isLoggedIn) {
+            if (role === 'ADMIN') {
+                navigate('/admin');
+            } else if (role === 'USER') {
+                navigate('/employee');
+            }
+        }
+    }, [isLoggedIn, role, navigate]);
 
     function handleUserInput(e) {
         const { name, value } = e.target;
@@ -28,8 +41,16 @@ function Login() {
         }
 
         const response = await dispatch(login(loginData));
+        
         if (response?.payload?.success) {
-            navigate("/");
+            const userRole = response?.payload?.user?.role;
+            if (userRole === 'ADMIN') {
+                navigate('/AdminDashboard');
+            } else if (userRole === 'EMPLOYEE') {
+                navigate('/EmployeeDashboard');
+            } else {
+                navigate('/');
+            }
         }
 
         setLoginData({
@@ -77,7 +98,6 @@ function Login() {
 
                     <div className="text-center mt-4">
                         <p>Don't have an account? <Link to="/signup" className='text-blue-600 hover:underline'>Sign up</Link></p>
-                        <p>Continue without login? <Link to="/" className='text-blue-600 hover:underline'>Waiting Page</Link></p>
                     </div>
                 </form>
             </div>

@@ -1,18 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import { isEmail, isValidPassword } from '../Helpers/regexMatcher';
-import { createAccount, SignupData } from '../Redux/Slices/authSlice.reducer';
-import { useAppDispatch } from '../Helpers/hooks';
+import { createAccount } from '../Redux/Slices/authSlice.reducer';
+import { useAppDispatch, useAppSelector } from '../Helpers/hooks';
+
 function Signup() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+
+    // Get the auth state from the Redux store
+    const { isLoggedIn} = useAppSelector((state) => state.auth);
+    const role = useAppSelector((state) => state.auth.data?.role);
 
     const [signupData, setSignupData] = useState({
         username: "",
         email: "",
         password: "",
     });
+
+    useEffect(() => {
+        if (isLoggedIn) {
+            if (role === 'ADMIN') {
+                navigate('/admin');
+            } else if (role === 'USER') {
+                navigate('/employee');
+            }
+        }
+    }, [isLoggedIn, role, navigate]);
 
     function handleUserInput(e) {
         const { name, value } = e.target;
@@ -44,7 +59,7 @@ function Signup() {
             return;
         }
 
-        const userData : SignupData = {
+        const userData = {
             username: signupData.username,
             email: signupData.email,
             password: signupData.password,
@@ -52,7 +67,7 @@ function Signup() {
 
         const response = await dispatch(createAccount(userData));
         if (response?.payload?.success) {
-            navigate("/login");
+            navigate("/");
         }
 
         setSignupData({
@@ -113,8 +128,7 @@ function Signup() {
                     </button>
 
                     <div className="text-center mt-4">
-                        <p>Already have an account? <Link to="/login" className='text-blue-600 hover:underline'>Login</Link></p>
-                        <p>Continue without signup? <Link to="/" className='text-blue-600 hover:underline'>Waiting Page</Link></p>
+                        <p>Already have an account? <Link to="/" className='text-blue-600 hover:underline'>Login</Link></p>
                     </div>
                 </form>
             </div>
