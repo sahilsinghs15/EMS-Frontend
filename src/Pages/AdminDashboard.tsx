@@ -4,36 +4,39 @@ import {
     createBulkEmployeesAsync,
     createManualEmployeeAsync,
     getAllEmployeesAsync,
+    updateEmployeeAsync,
+    deleteEmployeeAsync,
     IEmployee,
 } from "../Redux/Slices/employeeSlice.reducer";
 import { useAppDispatch, useAppSelector } from "../Helpers/hooks";
 
-type ManualFormType = Omit<IEmployee, "_id" | "userAccount"> & { userAccount?: string };
+type ManualFormType = Omit<IEmployee, "_id">;
 
 const AdminDashboard = () => {
     const dispatch = useAppDispatch();
     const { employees, status, error } = useAppSelector((state) => state.employees);
 
     const [tab, setTab] = useState("manual");
+    const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
     const [manualForm, setManualForm] = useState<ManualFormType>({
         fullName: "",
         employeeId: "",
         dateOfBirth: "",
         gender: undefined,
         nationality: "",
-        photoUrl: "", 
+        photoUrl: "",
         employmentInfo: {
             jobTitle: "",
-            manager: undefined, 
+            manager: undefined,
             department: "Web-Dev",
             hireDate: "",
             employmentType: "Full-time",
             status: "Active",
-            terminationDate: undefined, 
+            terminationDate: undefined,
         },
         contactInfo: {
             homeAddress: "",
-            personalPhoneNumber: "", 
+            personalPhoneNumber: "",
             workPhoneNumber: "",
             personalEmail: "",
             workEmail: "",
@@ -53,7 +56,7 @@ const AdminDashboard = () => {
             setManualForm((prev) => ({
                 ...prev,
                 [parent]: {
-                    ...prev[parent],
+                    ...(prev)[parent],
                     [child]: value,
                 },
             }));
@@ -62,9 +65,7 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleManualSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        dispatch(createManualEmployeeAsync(manualForm));
+    const resetForm = () => {
         setManualForm({
             fullName: "",
             employeeId: "",
@@ -90,6 +91,19 @@ const AdminDashboard = () => {
             },
             userAccount: "",
         });
+        setEditingEmployeeId(null);
+    };
+
+    const handleManualSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (editingEmployeeId) {
+            dispatch(updateEmployeeAsync({ id: editingEmployeeId, data: manualForm }));
+            toast.success("Employee updated successfully!");
+        } else {
+            dispatch(createManualEmployeeAsync(manualForm));
+            toast.success("Employee created successfully!");
+        }
+        resetForm();
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,43 +123,30 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleEdit = (employee: IEmployee) => {
+        setEditingEmployeeId(employee._id);
+        setManualForm({ ...employee });
+        setTab("manual");
+    };
+
+    const handleDelete = (id: string) => {
+        if (window.confirm("Are you sure you want to delete this employee?")) {
+            dispatch(deleteEmployeeAsync(id));
+            toast.success("Employee deleted successfully!");
+        }
+    };
+
     const renderStatus = () => {
         if (status === "loading") {
             return (
                 <div className="flex justify-center items-center py-4">
-                    <svg
-                        className="animate-spin h-8 w-8 text-indigo-600"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                    >
-                        <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                        ></circle>
-                        <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 
-                               0 5.373 0 12h4zm2 5.291A7.962 
-                               7.962 0 014 12H0c0 3.042 
-                               1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                    </svg>
-                    <span className="ml-2 text-gray-600">Loading...</span>
+                    <span className="text-gray-600">Loading...</span>
                 </div>
             );
         }
         if (status === "failed" && error) {
             return (
-                <div
-                    className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg"
-                    role="alert"
-                >
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg" role="alert">
                     <p className="font-bold">Error</p>
                     <p>{error}</p>
                 </div>
@@ -164,9 +165,7 @@ const AdminDashboard = () => {
                 <div className="flex border-b border-gray-200 mb-6">
                     <button
                         className={`py-2 px-4 font-semibold text-lg rounded-t-lg ${
-                            tab === "manual"
-                                ? "border-b-2 border-indigo-600 text-indigo-600"
-                                : "text-gray-500 hover:text-gray-700"
+                            tab === "manual" ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-500 hover:text-gray-700"
                         }`}
                         onClick={() => setTab("manual")}
                     >
@@ -174,9 +173,7 @@ const AdminDashboard = () => {
                     </button>
                     <button
                         className={`ml-4 py-2 px-4 font-semibold text-lg rounded-t-lg ${
-                            tab === "bulk"
-                                ? "border-b-2 border-indigo-600 text-indigo-600"
-                                : "text-gray-500 hover:text-gray-700"
+                            tab === "bulk" ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-500 hover:text-gray-700"
                         }`}
                         onClick={() => setTab("bulk")}
                     >
@@ -187,7 +184,9 @@ const AdminDashboard = () => {
                 {/* Manual Form */}
                 {tab === "manual" && (
                     <form onSubmit={handleManualSubmit} className="space-y-6">
-                        <h2 className="text-2xl font-bold text-gray-800">Add New Employee</h2>
+                        <h2 className="text-2xl font-bold text-gray-800">
+                            {editingEmployeeId ? "Update Employee" : "Add New Employee"}
+                        </h2>
 
                         {/* Personal Info */}
                         <div>
@@ -390,12 +389,23 @@ const AdminDashboard = () => {
                             />
                         </div>
 
-                        <button
-                            type="submit"
-                            className="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition duration-300 ease-in-out transform hover:scale-105 shadow-md"
-                        >
-                            Add Employee
-                        </button>
+                        <div className="flex gap-4">
+                            <button
+                                type="submit"
+                                className="flex-1 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition"
+                            >
+                                {editingEmployeeId ? "Update Employee" : "Add Employee"}
+                            </button>
+                            {editingEmployeeId && (
+                                <button
+                                    type="button"
+                                    onClick={resetForm}
+                                    className="flex-1 bg-gray-400 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-500 transition"
+                                >
+                                    Cancel
+                                </button>
+                            )}
+                        </div>
                     </form>
                 )}
 
@@ -403,23 +413,8 @@ const AdminDashboard = () => {
                 {tab === "bulk" && (
                     <form onSubmit={handleBulkSubmit} className="space-y-4">
                         <h2 className="text-2xl font-bold text-gray-800">Bulk Upload</h2>
-                        <div className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500">
-                            <input
-                                type="file"
-                                onChange={handleFileChange}
-                                accept=".xlsx,.csv"
-                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 
-                                           file:rounded-full file:border-0 file:text-sm file:font-semibold 
-                                           file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                            />
-                        </div>
-                        <p className="text-sm text-gray-500 text-center">
-                            Supported formats: .xlsx, .csv
-                        </p>
-                        <button
-                            type="submit"
-                            className="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition duration-300 ease-in-out transform hover:scale-105 shadow-md"
-                        >
+                        <input type="file" onChange={handleFileChange} accept=".xlsx,.csv" />
+                        <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">
                             Upload File
                         </button>
                     </form>
@@ -434,40 +429,35 @@ const AdminDashboard = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Full Name
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Employee ID
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Job Title
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Department
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Work Email
-                                    </th>
+                                    <th className="px-6 py-3">Full Name</th>
+                                    <th className="px-6 py-3">Employee ID</th>
+                                    <th className="px-6 py-3">Job Title</th>
+                                    <th className="px-6 py-3">Department</th>
+                                    <th className="px-6 py-3">Work Email</th>
+                                    <th className="px-6 py-3">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {employees.map((employee) => (
                                     <tr key={employee._id}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {employee.fullName}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {employee.employeeId}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {employee.employmentInfo.jobTitle}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {employee.employmentInfo.department}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {employee.contactInfo.workEmail}
+                                        <td className="px-6 py-4">{employee.fullName}</td>
+                                        <td className="px-6 py-4">{employee.employeeId}</td>
+                                        <td className="px-6 py-4">{employee.employmentInfo.jobTitle}</td>
+                                        <td className="px-6 py-4">{employee.employmentInfo.department}</td>
+                                        <td className="px-6 py-4">{employee.contactInfo.workEmail}</td>
+                                        <td className="px-6 py-4 flex gap-2">
+                                            <button
+                                                onClick={() => handleEdit(employee)}
+                                                className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(employee._id)}
+                                                className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                                            >
+                                                Delete
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
