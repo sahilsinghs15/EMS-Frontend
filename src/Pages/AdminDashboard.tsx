@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import {
     createBulkEmployeesAsync,
     createManualEmployeeAsync,
@@ -14,10 +15,16 @@ type ManualFormType = Omit<IEmployee, "_id">;
 
 const AdminDashboard = () => {
     const dispatch = useAppDispatch();
+    const navigate = useNavigate();
     const { employees, status, error } = useAppSelector((state) => state.employees);
 
     const [tab, setTab] = useState("manual");
     const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+
+    // Date filter state
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
+
     const [manualForm, setManualForm] = useState<ManualFormType>({
         fullName: "",
         employeeId: "",
@@ -155,12 +162,23 @@ const AdminDashboard = () => {
         return null;
     };
 
+    const filteredEmployees = employees.filter((employee) => {
+        const hireDate = new Date(employee.employmentInfo.hireDate).getTime();
+        const start = startDate ? new Date(startDate).getTime() : null;
+        const end = endDate ? new Date(endDate).getTime() : null;
+
+        if (start && hireDate < start) return false;
+        if (end && hireDate > end) return false;
+        return true;
+    });
+
     return (
         <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-sans">
             <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 text-center mb-6">
                 Admin Dashboard
             </h1>
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 max-w-6xl mx-auto">
+                
                 {/* Tabs */}
                 <div className="flex border-b border-gray-200 mb-6">
                     <button
@@ -180,7 +198,7 @@ const AdminDashboard = () => {
                         Bulk Upload
                     </button>
                 </div>
-
+                
                 {/* Manual Form */}
                 {tab === "manual" && (
                     <form onSubmit={handleManualSubmit} className="space-y-6">
@@ -423,6 +441,29 @@ const AdminDashboard = () => {
                 {/* Employee List */}
                 <hr className="my-8" />
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">All Employees</h2>
+
+                {/* Date Filters */}
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="p-2 border rounded-lg"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                        <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="p-2 border rounded-lg"
+                        />
+                    </div>
+                </div>
+
                 {renderStatus()}
                 {status === "succeeded" && (
                     <div className="overflow-x-auto rounded-lg shadow-sm border border-gray-200">
@@ -433,17 +474,26 @@ const AdminDashboard = () => {
                                     <th className="px-6 py-3">Employee ID</th>
                                     <th className="px-6 py-3">Job Title</th>
                                     <th className="px-6 py-3">Department</th>
+                                    <th className="px-6 py-3">Hire Date</th>
                                     <th className="px-6 py-3">Work Email</th>
                                     <th className="px-6 py-3">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {employees.map((employee) => (
+                                {filteredEmployees.map((employee) => (
                                     <tr key={employee._id}>
-                                        <td className="px-6 py-4">{employee.fullName}</td>
+                                        <td
+                                            onClick={() => navigate(`/employee/${employee._id}`)}
+                                            className="px-6 py-4 text-indigo-600 font-semibold cursor-pointer hover:underline"
+                                        >
+                                            {employee.fullName}
+                                        </td>
                                         <td className="px-6 py-4">{employee.employeeId}</td>
                                         <td className="px-6 py-4">{employee.employmentInfo.jobTitle}</td>
                                         <td className="px-6 py-4">{employee.employmentInfo.department}</td>
+                                        <td className="px-6 py-4">
+                                            {new Date(employee.employmentInfo.hireDate).toLocaleDateString()}
+                                        </td>
                                         <td className="px-6 py-4">{employee.contactInfo.workEmail}</td>
                                         <td className="px-6 py-4 flex gap-2">
                                             <button
